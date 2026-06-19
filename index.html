@@ -1,59 +1,144 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8" />
-  <title>물받침대 계산기</title>
-  <style>
-    body { font-family: Arial, sans-serif; max-width: 520px; margin: 40px auto; }
-    input, button { padding: 10px; margin: 6px 0; width: 100%; box-sizing: border-box; }
-    button { background: #222; color: white; border: 0; cursor: pointer; }
-    .result { margin-top: 20px; padding: 16px; background: #f3f3f3; border-radius: 8px; }
-    .box { display: inline-block; padding: 10px; margin: 4px; background: #9fd3c7; border-radius: 4px; }
-  </style>
+<meta charset="UTF-8">
+<title>물받침대 수량 계산기</title>
+<style>
+body{font-family:Arial,sans-serif;max-width:760px;margin:40px auto;padding:20px}
+input,select,button{width:100%;padding:12px;margin-top:10px;box-sizing:border-box;font-size:16px}
+button{background:#222;color:white;border:0;cursor:pointer}
+.result{display:none;margin-top:20px;padding:18px;background:#f5f5f5;border-radius:8px}
+.shelf{position:relative;border:3px solid #333;background:#fafafa;margin-top:15px}
+.tray{position:absolute;background:#b7dfc8;border:1px solid #333;box-sizing:border-box;text-align:center;font-size:11px;overflow:hidden}
+.case{margin-top:30px}
+</style>
 </head>
 <body>
 
-  <h2>물받침대 수량 계산기</h2>
+<h2>물받침대 수량 계산기</h2>
 
-  <label>선반 가로(cm)</label>
-  <input id="shelfW" type="number" value="99.5">
+<label>선반 크기 입력 / 단위 cm</label>
+<input type="text" id="shelfSize" placeholder="예: 60x40">
 
-  <label>선반 세로(cm)</label>
-  <input id="shelfH" type="number" value="33.5">
+<label>물받침대 선택</label>
+<select id="trayType">
+  <option value="소소,31,10.5">소소 (31 x 10.5)</option>
+  <option value="소형,31,17">소형 (31 x 17)</option>
+  <option value="슬림형,38,10">슬림형 (38 x 10)</option>
+  <option value="대형,38,22">대형 (38 x 22)</option>
+  <option value="하이형,33,24.5">하이형 (33 x 24.5)</option>
+</select>
 
-  <button onclick="calculate()">계산하기</button>
+<button onclick="calculate()">계산하기</button>
 
-  <div class="result" id="result"></div>
+<div id="result" class="result"></div>
 
-  <script>
-    function getCount(shelfW, shelfH, itemW, itemH) {
-      const normal = Math.floor(shelfW / itemW) * Math.floor(shelfH / itemH);
-      const rotated = Math.floor(shelfW / itemH) * Math.floor(shelfH / itemW);
-      return Math.max(normal, rotated);
-    }
+<script>
+function parseShelfSize(input){
+  input = input.replace(/×/g, 'x').replace(/\*/g, 'x').replace(/\s/g, '');
+  const parts = input.split('x');
+  if(parts.length !== 2) return null;
 
-    function calculate() {
-      const shelfW = Number(document.getElementById("shelfW").value);
-      const shelfH = Number(document.getElementById("shelfH").value);
+  const w = parseFloat(parts[0]);
+  const h = parseFloat(parts[1]);
 
-      const small = getCount(shelfW, shelfH, 31, 17);
-      const large = getCount(shelfW, shelfH, 38, 22);
+  if(isNaN(w) || isNaN(h) || w <= 0 || h <= 0) return null;
+  return {w, h};
+}
 
-      document.getElementById("result").innerHTML = `
-        <h3>계산 결과</h3>
-        <p>소형 물받침대: <b>${small}개</b></p>
-        <p>대형 물받침대: <b>${large}개</b></p>
+function getLayout(shelfW, shelfH, trayW, trayH){
+  const cols = Math.floor(shelfW / trayW);
+  const rows = Math.floor(shelfH / trayH);
 
-        <h4>소형 배치 예시</h4>
-        ${'<span class="box">소형</span>'.repeat(small)}
+  return {
+    cols,
+    rows,
+    count: cols * rows,
+    remainW: +(shelfW - cols * trayW).toFixed(1),
+    remainH: +(shelfH - rows * trayH).toFixed(1)
+  };
+}
 
-        <h4>대형 배치 예시</h4>
-        ${'<span class="box">대형</span>'.repeat(large)}
+function drawShelf(shelfW, shelfH, trayW, trayH, cols, rows, trayName){
+  const maxWidth = 620;
+  const scale = maxWidth / shelfW;
+  const shelfPixelW = shelfW * scale;
+  const shelfPixelH = shelfH * scale;
+
+  let html = `<div class="shelf" style="width:${shelfPixelW}px;height:${shelfPixelH}px;">`;
+
+  for(let y = 0; y < rows; y++){
+    for(let x = 0; x < cols; x++){
+      html += `
+        <div class="tray" style="
+          left:${x * trayW * scale}px;
+          top:${y * trayH * scale}px;
+          width:${trayW * scale}px;
+          height:${trayH * scale}px;
+          line-height:${Math.min(trayH * scale, 26)}px;
+        ">${trayName}</div>
       `;
     }
+  }
 
-    calculate();
-  </script>
+  html += `</div>`;
+  return html;
+}
+
+function calculate(){
+  const resultBox = document.getElementById('result');
+  resultBox.style.display = 'block';
+
+  const shelf = parseShelfSize(document.getElementById('shelfSize').value);
+
+  if(!shelf){
+    resultBox.innerHTML = '선반 크기를 예시처럼 입력해주세요. 예: 60x40';
+    return;
+  }
+
+  const trayData = document.getElementById('trayType').value.split(',');
+  const trayName = trayData[0];
+  const trayW = parseFloat(trayData[1]);
+  const trayH = parseFloat(trayData[2]);
+
+  const normal = getLayout(shelf.w, shelf.h, trayW, trayH);
+  const rotated = getLayout(shelf.w, shelf.h, trayH, trayW);
+
+  let best = '';
+  if(normal.count > rotated.count) best = '기본배치가 더 많이 들어갑니다.';
+  else if(rotated.count > normal.count) best = '회전배치가 더 많이 들어갑니다.';
+  else best = '기본배치와 회전배치 수량이 같습니다.';
+
+  resultBox.innerHTML = `
+    <h3>계산 결과</h3>
+    <p>선반 크기: <b>${shelf.w} x ${shelf.h} cm</b></p>
+    <p>선택 제품: <b>${trayName} ${trayW} x ${trayH} cm</b></p>
+    <p><b>${best}</b></p>
+
+    <div class="case">
+      <h3>1. 기본배치</h3>
+      <p>
+        ${trayW} x ${trayH} cm 방향<br>
+        가로 ${normal.cols}개 × 세로 ${normal.rows}줄 =
+        <b>${normal.count}개</b><br>
+        남는 공간: 가로 ${normal.remainW}cm / 세로 ${normal.remainH}cm
+      </p>
+      ${drawShelf(shelf.w, shelf.h, trayW, trayH, normal.cols, normal.rows, trayName)}
+    </div>
+
+    <div class="case">
+      <h3>2. 회전배치</h3>
+      <p>
+        ${trayH} x ${trayW} cm 방향<br>
+        가로 ${rotated.cols}개 × 세로 ${rotated.rows}줄 =
+        <b>${rotated.count}개</b><br>
+        남는 공간: 가로 ${rotated.remainW}cm / 세로 ${rotated.remainH}cm
+      </p>
+      ${drawShelf(shelf.w, shelf.h, trayH, trayW, rotated.cols, rotated.rows, trayName)}
+    </div>
+  `;
+}
+</script>
 
 </body>
 </html>
