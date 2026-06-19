@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <title>물받침대 계산기</title>
+  <style>
+    body { font-family: Arial, sans-serif; max-width: 520px; margin: 40px auto; }
+    input, button { padding: 10px; margin: 6px 0; width: 100%; box-sizing: border-box; }
+    button { background: #222; color: white; border: 0; cursor: pointer; }
+    .result { margin-top: 20px; padding: 16px; background: #f3f3f3; border-radius: 8px; }
+    .box { display: inline-block; padding: 10px; margin: 4px; background: #9fd3c7; border-radius: 4px; }
+  </style>
+</head>
+<body>
+
+  <h2>물받침대 수량 계산기</h2>
+
+  <label>선반 가로(cm)</label>
+  <input id="shelfW" type="number" value="99.5">
+
+  <label>선반 세로(cm)</label>
+  <input id="shelfH" type="number" value="33.5">
+
+  <button onclick="calculate()">계산하기</button>
+
+  <div class="result" id="result"></div>
+
+  <script>
+    function getCount(shelfW, shelfH, itemW, itemH) {
+      const normal = Math.floor(shelfW / itemW) * Math.floor(shelfH / itemH);
+      const rotated = Math.floor(shelfW / itemH) * Math.floor(shelfH / itemW);
+      return Math.max(normal, rotated);
+    }
+
+    function calculate() {
+      const shelfW = Number(document.getElementById("shelfW").value);
+      const shelfH = Number(document.getElementById("shelfH").value);
+
+      const small = getCount(shelfW, shelfH, 31, 17);
+      const large = getCount(shelfW, shelfH, 38, 22);
+
+      document.getElementById("result").innerHTML = `
+        <h3>계산 결과</h3>
+        <p>소형 물받침대: <b>${small}개</b></p>
+        <p>대형 물받침대: <b>${large}개</b></p>
+
+        <h4>소형 배치 예시</h4>
+        ${'<span class="box">소형</span>'.repeat(small)}
+
+        <h4>대형 배치 예시</h4>
+        ${'<span class="box">대형</span>'.repeat(large)}
+      `;
+    }
+
+    calculate();
+  </script>
+
+</body>
+</html>
